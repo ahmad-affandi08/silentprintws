@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { printQueueTicket, printApmTicket } = require('./services/printService'); // Mengimpor fungsi cetak
+const { printBarcodeLabel } = require('./services/barcodeService'); // Mengimpor fungsi cetak barcode
 
 const app = express();
 const PORT = 3007; // Port untuk server lokal
@@ -49,6 +50,24 @@ app.post('/print', async (req, res) => {
   } catch (error) {
     console.error('[SERVER] Gagal saat proses cetak:', error.message);
     res.status(500).json({ success: false, message: 'Gagal mencetak.', error: error.message });
+  }
+});
+
+// Barcode print route
+app.post('/print/barcode', async (req, res) => {
+  console.log('[SERVER] Menerima request cetak barcode');
+  const body = req.body || {};
+
+  if (!body.patientData) {
+    return res.status(400).json({ success: false, message: 'patientData wajib diisi untuk route /print/barcode' });
+  }
+
+  try {
+    await printBarcodeLabel(body.patientData, body.copies || 1);
+    return res.status(200).json({ success: true, message: 'Cetak barcode berhasil.' });
+  } catch (e) {
+    console.error('[SERVER] Gagal cetak barcode:', e.message);
+    return res.status(500).json({ success: false, message: 'Gagal mencetak barcode.', error: e.message });
   }
 });
 
