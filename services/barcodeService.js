@@ -1,4 +1,3 @@
-const { ThermalPrinter, PrinterTypes } = require('node-thermal-printer');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -34,17 +33,10 @@ function calculateAge(dateOfBirth) {
 }
 
 /**
- * Mencetak barcode pasien dalam format label 55x33mm landscape
- * @param {Object} patientData - Data pasien dari frontend
- * @param {number} copies - Jumlah salinan (default: 1)
+ * Generate ZPL commands untuk Zebra GT820
+ * Format label: 55x33mm landscape
  */
-async function printBarcodeLabel(patientData, copies = 6) {
-  const PRINTER_SHARE_NAME = "BARCODEPRINTER";
-  const hostname = os.hostname();
-  const printerInterface = `\\\\${hostname}\\${PRINTER_SHARE_NAME}`;
-
-  console.log(`[BARCODE] Menyiapkan ${copies} salinan barcode untuk dicetak ke: ${printerInterface}`);
-
+function generateZPL(patientData) {
   const peserta = patientData.peserta || {};
   const noRM = peserta.NORM || peserta.mr?.noMR || '';
   const nama = (peserta.NAMA_LENGKAP || peserta.nama || '').toUpperCase();
@@ -60,52 +52,38 @@ async function printBarcodeLabel(patientData, copies = 6) {
   const alamat = (peserta.alamat || '').substring(0, 50);
   const umurText = calculateAge(peserta.TANGGAL_LAHIR || peserta.tglLahir);
 
-  const thermalPrinter = new ThermalPrinter({
-    type: PrinterTypes.EPSON,
-    interface: 'tcp://127.0.0.1:9100', // Dummy interface
-    characterSet: "SLOVENIA",
-    removeSpecialCharacters: false,
-    lineCharacter: "-"
-  });
+  // ZPL commands untuk Zebra GT820
+  // Label size: 55mm x 33mm (landscape) = 2.17" x 1.3"
+  // Resolution 203 dpi (8 dots/mm)
+  const zpl = `^XA
+^MMT
+^PW440
+^LL264
+^LH0,0
+^FO10,10^A0N,25,25^FD${nama} (${genderShort})^FS
+^FO10,45^A0N,20,20^FDRM : ${noRM}  Tgl Lhr ${tglLahir}^FS
+^FO10,75^A0N,20,20^FDNO KTP : ${noKTP}^FS
+^FO10,105^A0N,20,20^FD${umurText}^FS
+^FO10,135^A0N,18,18^FD${alamat}^FS
+^FO80,170^BY2^BCN,60,N,N,N^FD${noRM}^FS
+^XZ`;
 
-  // Layout barcode label (sesuai design frontend: 55x33mm landscape)
-  thermalPrinter.alignLeft();
-  thermalPrinter.setTextSize(1, 1);
-  thermalPrinter.bold(true);
-  
-  // Baris 1: Nama & Gender
-  thermalPrinter.println(`${nama} (${genderShort})`);
-  thermalPrinter.newLine();
-  
-  // Baris 2: RM & Tgl Lahir
-  thermalPrinter.bold(true);
-  thermalPrinter.println(`RM : ${noRM} Tgl Lhr ${tglLahir}`);
-  
-  // Baris 3: NO KTP
-  thermalPrinter.println(`NO KTP : ${noKTP}`);
-  
-  // Baris 4: Umur
-  thermalPrinter.println(`${umurText}`);
-  
-  // Baris 5: Alamat
-  thermalPrinter.setTextSize(0, 0);
-  thermalPrinter.println(alamat);
-  thermalPrinter.bold(false);
-  thermalPrinter.newLine();
+  return Buffer.from(zpl, 'utf8');
+}
 
-  // Barcode menggunakan ESC/POS native barcode command (tidak perlu canvas/jsbarcode)
-  thermalPrinter.alignCenter();
-  thermalPrinter.printBarcode(noRM, 'CODE39', {
-    hriPos: 0, // 0 = not printed, 1 = above, 2 = below
-    hriFont: 0, // 0 = font A, 1 = font B
-    width: 3,   // 2-6 (module width)
-    height: 80  // 1-255 (height in dots)
-  });
+/**
+ * Mencetak barcode pasien dalam format label 55x33mm landscape
+ * @param {Object} patientData - Data pasien dari frontend
+ * @param {number} copies - Jumlah salinan (default: 6)
+ */
+async function printBarcodeLabel(patientData, copies = 6) {
+  const PRINTER_SHARE_NAME = "BARCODEPRINTER";
+  const hostname = os.hostname();
+  const printerInterface = `\\\\${hostname}\\${PRINTER_SHARE_NAME}`;
 
-  thermalPrinter.newLine();
-  thermalPrinter.cut();
+  console.log(`[BARCODE] Menyiapkan ${copies} salinan barcode untuk dicetak ke: ${printerInterface}`);
 
-  const buffer = thermalPrinter.getBuffer();
+  const buffer = generateZPL(patientData);
 
   // Loop untuk jumlah salinan
   for (let i = 0; i < copies; i++) {
