@@ -1,28 +1,8 @@
-const { createCanvas } = require('canvas');
 const { ThermalPrinter, PrinterTypes } = require('node-thermal-printer');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const JsBarcode = require('jsbarcode');
-
-/**
- * Menghasilkan barcode CODE39 dari noRM
- * @param {string} noRM - Nomor Rekam Medis
- * @returns {Buffer} - Buffer gambar PNG barcode
- */
-function generateBarcodeImage(noRM) {
-  const canvas = createCanvas(200, 100);
-  JsBarcode(canvas, noRM, {
-    format: 'CODE39',
-    width: 2,
-    height: 100,
-    displayValue: false,
-    margin: 0
-  });
-  
-  return canvas.toBuffer('image/png');
-}
 
 /**
  * Menghitung usia dari tanggal lahir
@@ -80,9 +60,6 @@ async function printBarcodeLabel(patientData, copies = 1) {
   const alamat = (peserta.alamat || '').substring(0, 50);
   const umurText = calculateAge(peserta.TANGGAL_LAHIR || peserta.tglLahir);
 
-  // Generate barcode image
-  const barcodeBuffer = generateBarcodeImage(noRM);
-
   const thermalPrinter = new ThermalPrinter({
     type: PrinterTypes.EPSON,
     interface: 'tcp://127.0.0.1:9100', // Dummy interface
@@ -116,16 +93,14 @@ async function printBarcodeLabel(patientData, copies = 1) {
   thermalPrinter.bold(false);
   thermalPrinter.newLine();
 
-  // Barcode image (embedded sebagai image jika printer mendukung)
-  // Catatan: node-thermal-printer mendukung printImage untuk beberapa printer
-  try {
-    await thermalPrinter.printImage(barcodeBuffer);
-  } catch (err) {
-    console.warn('[BARCODE] Printer tidak mendukung image, skip barcode image:', err.message);
-    // Fallback: print noRM sebagai teks
-    thermalPrinter.alignCenter();
-    thermalPrinter.println(noRM);
-  }
+  // Barcode menggunakan ESC/POS native barcode command (tidak perlu canvas/jsbarcode)
+  thermalPrinter.alignCenter();
+  thermalPrinter.printBarcode(noRM, 'CODE39', {
+    hriPos: 0, // 0 = not printed, 1 = above, 2 = below
+    hriFont: 0, // 0 = font A, 1 = font B
+    width: 3,   // 2-6 (module width)
+    height: 80  // 1-255 (height in dots)
+  });
 
   thermalPrinter.newLine();
   thermalPrinter.cut();

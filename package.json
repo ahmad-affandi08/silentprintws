@@ -12,7 +12,8 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "node-thermal-printer": "^4.5.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "jsbarcode": "^3.11.5"
   },
   "devDependencies":{
     "pkg": "^5.8.1"
