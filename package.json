@@ -1,12 +1,25 @@
-{ 
-  "scripts": {
+{
+  "name": "silent-print-ws",
+  "version": "1.0.0",
+  "main": "index.js",
+  "bin": "index.js", 
+  "scripts":{
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "build": "pkg ." 
   },
-  "dependencies": {
+  "dependencies":{
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "node-thermal-printer": "^4.5.0",
     "nodemon": "^3.1.10"
+  },
+  "devDependencies":{
+    "pkg": "^5.8.1"
+  },
+  "pkg": {           
+    "scripts": "index.js",
+    "targets": [ "node18-win-x64" ],
+    "assets": []
   }
 }

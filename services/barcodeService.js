@@ -59,7 +59,7 @@ function calculateAge(dateOfBirth) {
  * @param {number} copies - Jumlah salinan (default: 1)
  */
 async function printBarcodeLabel(patientData, copies = 1) {
-  const PRINTER_SHARE_NAME = "SILENTPRINTER";
+  const PRINTER_SHARE_NAME = "BARCODEPRINTER";
   const hostname = os.hostname();
   const printerInterface = `\\\\${hostname}\\${PRINTER_SHARE_NAME}`;
 
