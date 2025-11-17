@@ -63,7 +63,9 @@ app.post('/print/barcode', async (req, res) => {
   }
 
   try {
-    await printBarcodeLabel(body.patientData, body.copies || 1);
+    // Ignore client-supplied 'copies' value — backend decides how many copies to print
+    // Call printBarcodeLabel without passing copies so the service uses server config/default
+    await printBarcodeLabel(body.patientData);
     return res.status(200).json({ success: true, message: 'Cetak barcode berhasil.' });
   } catch (e) {
     console.error('[SERVER] Gagal cetak barcode:', e.message);

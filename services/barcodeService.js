@@ -38,45 +38,57 @@ function calculateAge(dateOfBirth) {
  */
 function generateZPL(patientData) {
   const peserta = patientData.peserta || {};
-  const noRM = peserta.NORM || peserta.mr?.noMR || '';
-  const nama = (peserta.NAMA_LENGKAP || peserta.nama || '').toUpperCase();
-  const _genderRaw = (peserta.JENIS_KELAMIN || peserta.sex || '').toString();
-  const genderShort = /p/i.test(_genderRaw) ? 'P' : 'L';
-  
-  const tglLahir = new Date(peserta.TANGGAL_LAHIR || peserta.tglLahir).toLocaleDateString(
-    'id-ID',
-    { day: '2-digit', month: '2-digit', year: 'numeric' }
-  );
-  
-  const noKTP = peserta.NIK || peserta.nik || '-';
-  const alamat = (peserta.alamat || '').substring(0, 50);
+  const noRM = peserta.NORM || peserta.mr?.noMR || "";
+  const nama = (peserta.NAMA_LENGKAP || peserta.nama || "").toUpperCase();
+  const _genderRaw = (peserta.JENIS_KELAMIN || peserta.sex || "").toString();
+  const genderShort = /p/i.test(_genderRaw) ? "P" : "L";
+
+  const tglLahir = new Date(
+    peserta.TANGGAL_LAHIR || peserta.tglLahir
+  ).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const noKTP = peserta.NIK || peserta.nik || "-";
+  const alamat = (peserta.alamat || "").substring(0, 50);
   const umurText = calculateAge(peserta.TANGGAL_LAHIR || peserta.tglLahir);
 
-  // ZPL commands untuk Zebra GT820
-  // Label size: 55mm x 33mm (landscape) = 2.17" x 1.3"
-  // Resolution 203 dpi (8 dots/mm)
   const zpl = `^XA
-^MMT
-^PW440
-^LL264
+^PW450
+^LL250
 ^LH0,0
-^FO10,10^A0N,25,25^FD${nama} (${genderShort})^FS
-^FO10,45^A0N,20,20^FDRM : ${noRM}  Tgl Lhr ${tglLahir}^FS
-^FO10,75^A0N,20,20^FDNO KTP : ${noKTP}^FS
-^FO10,105^A0N,20,20^FD${umurText}^FS
-^FO10,135^A0N,18,18^FD${alamat}^FS
-^FO80,170^BY2^BCN,60,N,N,N^FD${noRM}^FS
+
+^FO30,30^A0N,28,28^FD${nama} (${genderShort})^FS
+
+^FO30,60^A0N,20,20^FDRM : ${noRM}  Tgl Lhr ${tglLahir}^FS
+^FO30,88^A0N,20,20^FDNO KTP : ${noKTP}^FS
+^FO30,115^A0N,20,20^FD${umurText}^FS
+^FO30,140^A0N,20,20^FD${alamat}^FS
+
+^FO30,165^BY3,2,80^BCN,80,N,N,N^FD${noRM}^FS
+
 ^XZ`;
 
-  return Buffer.from(zpl, 'utf8');
+  return Buffer.from(zpl, "utf8");
 }
+
 
 /**
  * Mencetak barcode pasien dalam format label 55x33mm landscape
  * @param {Object} patientData - Data pasien dari frontend
  * @param {number} copies - Jumlah salinan (default: 6)
  */
-async function printBarcodeLabel(patientData, copies = 6) {
+// Fixed backend default for barcode copies
+const DEFAULT_BARCODE_COPIES = 6;
+
+async function printBarcodeLabel(patientData, copies) {
+  // Determine final copies: use explicit numeric `copies` if provided, otherwise use server default (6)
+  if (typeof copies !== 'number' || Number.isNaN(copies)) {
+    copies = DEFAULT_BARCODE_COPIES;
+  }
+
   const PRINTER_SHARE_NAME = "BARCODEPRINTER";
   const hostname = os.hostname();
   const printerInterface = `\\\\${hostname}\\${PRINTER_SHARE_NAME}`;
