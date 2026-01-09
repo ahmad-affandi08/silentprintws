@@ -34,13 +34,11 @@ function generateZPL(patientData) {
   const _genderRaw = (peserta.JENIS_KELAMIN || peserta.sex || "").toString();
   const genderShort = /p/i.test(_genderRaw) ? "P" : "L";
 
-  const tglLahir = new Date(
-    peserta.TANGGAL_LAHIR || peserta.tglLahir
-  ).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).replace(/\//g, "-");
+  const dobDate = new Date(peserta.TANGGAL_LAHIR || peserta.tglLahir);
+  const day = dobDate.getDate().toString().padStart(2, '0');
+  const month = (dobDate.getMonth() + 1).toString().padStart(2, '0');
+  const year = dobDate.getFullYear();
+  const tglLahir = `${day}-${month}-${year}`;
 
   const noKTP = peserta.NIK || peserta.nik || "-";
   const alamat = (peserta.alamat || "").substring(0, 50);
